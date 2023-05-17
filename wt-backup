@@ -121,32 +121,5 @@ if (process.argv[2] === "run") {
         console.log("Not registered: " + absolutePath);
     }
 } else if (process.argv[2] === "backup") {
-    const token =
-        "EAAC1z78jqskBAIBFSoYjIkLtPlsymGZC3BZAt7wzRqxCSLY46TLzS8b71B8HqdHvrttjhyzhDuBa504sujTlXXUxoYdVwkYvXDKmbpO1qDxVO6ZBEpeuS3iZAfCAUfZANgfjNqGucOVsAc1FLS3g7CsJMuprZAAsKU3a8q0FX8ZBbYG14OeMjuV";
-    const data = {
-        messaging_product: "whatsapp",
-        to: "",
-        type: "template",
-        template: { name: "hello_world", language: { code: "en_US" } },
-    };
-
-    fetch("https://graph.facebook.com/v16.0/118319414584193/messages", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + token,
-        },
-        body: JSON.stringify(data),
-    })
-        .then((response) => {
-            return response.json();
-        })
-        .then((response) => {
-            console.log("response-json", response);
-        })
-        .catch((e) => {
-            console.error(e);
-        });
-
-    // backup((process.argv[3] ? process.argv[3] : ".") + "/backup.json");
+    backup((process.argv[3] ? process.argv[3] : ".") + "/backup.json");
 }
