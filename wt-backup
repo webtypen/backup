@@ -1,0 +1,152 @@
+#!/usr/bin/node
+const fs = require("fs");
+const path = require("path");
+const mainPath = require("path").dirname(require.main.filename);
+const moment = require("moment");
+const { backup } = require("./lib/backup");
+
+if (process.argv[2] === "run") {
+    let lastCheckInfo = moment();
+    const check = async () => {
+        if (parseInt(moment().diff(lastCheckInfo, "minutes")) >= 2) {
+            lastCheckInfo = moment();
+            console.log("Still watching (" + moment().format("YYYY-MM-DD HH:mm") + ") ...");
+        }
+
+        if (!fs.existsSync(mainPath + "/registered.json")) {
+            setTimeout(() => {
+                check();
+            }, 60000);
+
+            return;
+        }
+
+        let registeredString = "";
+        if (fs.existsSync(mainPath + "/registered.json")) {
+            registeredString = fs.readFileSync(mainPath + "/registered.json", "utf-8");
+        }
+
+        const registered = registeredString && registeredString.trim() !== "" ? JSON.parse(registeredString) : [];
+        if (!registered || registered.length < 1) {
+            setTimeout(() => {
+                check();
+            }, 60000);
+
+            return;
+        }
+
+        const time = moment().format("HH:mm");
+        for (let entry of registered) {
+            if (!fs.existsSync(entry)) {
+                continue;
+            }
+
+            const defString = fs.readFileSync(entry, "utf-8");
+            const def = defString ? JSON.parse(defString) : null;
+            if (!def || !def.times || def.times.length < 1) {
+                continue;
+            }
+
+            if (def.times.includes(time)) {
+                backup(entry);
+            }
+        }
+
+        setTimeout(() => {
+            check();
+        }, 60000);
+    };
+
+    console.log("Backup watcher started ...");
+    check();
+} else if (process.argv[2] === "register") {
+    const definitionPath = (process.argv[3] ? process.argv[3] : ".") + "/backup.json";
+    if (!fs.existsSync(definitionPath)) {
+        console.log("Backup-Definition `" + definitionPath + "` not found ...");
+        return;
+    }
+
+    const absolutePath = path.resolve(definitionPath);
+    if (!absolutePath || absolutePath.trim() === "") {
+        console.log("Backup-Definition `" + definitionPath + "` not found (absolute-path) ...");
+        return;
+    }
+
+    let registeredString = "";
+    if (fs.existsSync(mainPath + "/registered.json")) {
+        registeredString = fs.readFileSync(mainPath + "/registered.json", "utf-8");
+    }
+
+    let add = true;
+    const registered = registeredString && registeredString.trim() !== "" ? JSON.parse(registeredString) : [];
+    if (registered && registered.length > 0) {
+        for (let entry of registered) {
+            if (entry === absolutePath) {
+                add = false;
+                break;
+            }
+        }
+    }
+
+    if (add) {
+        registered.push(absolutePath);
+        fs.writeFileSync(mainPath + "/registered.json", JSON.stringify(registered), "utf-8");
+        console.log("Successfully registered: " + absolutePath);
+    } else {
+        console.log("Already registered: " + absolutePath);
+    }
+} else if (process.argv[2] === "unregister") {
+    const definitionPath = (process.argv[3] ? process.argv[3] : ".") + "/backup.json";
+    if (!fs.existsSync(definitionPath)) {
+        console.log("Backup-Definition `" + definitionPath + "` not found ...");
+        return;
+    }
+
+    const absolutePath = path.resolve(definitionPath);
+    if (!absolutePath || absolutePath.trim() === "") {
+        console.log("Backup-Definition `" + definitionPath + "` not found (absolute-path) ...");
+        return;
+    }
+
+    let registeredString = "";
+    if (fs.existsSync(mainPath + "/registered.json")) {
+        registeredString = fs.readFileSync(mainPath + "/registered.json", "utf-8");
+    }
+    const registered = registeredString && registeredString.trim() !== "" ? JSON.parse(registeredString) : [];
+    if (registered && registered.includes(absolutePath)) {
+        registered.splice(registered.indexOf(absolutePath), 1);
+        fs.writeFileSync(mainPath + "/registered.json", JSON.stringify(registered), "utf-8");
+        console.log("Successfully removed: " + absolutePath);
+    } else {
+        console.log("Not registered: " + absolutePath);
+    }
+} else if (process.argv[2] === "backup") {
+    const token =
+        "EAAC1z78jqskBAIBFSoYjIkLtPlsymGZC3BZAt7wzRqxCSLY46TLzS8b71B8HqdHvrttjhyzhDuBa504sujTlXXUxoYdVwkYvXDKmbpO1qDxVO6ZBEpeuS3iZAfCAUfZANgfjNqGucOVsAc1FLS3g7CsJMuprZAAsKU3a8q0FX8ZBbYG14OeMjuV";
+    const data = {
+        messaging_product: "whatsapp",
+        to: "",
+        type: "template",
+        template: { name: "hello_world", language: { code: "en_US" } },
+    };
+
+    fetch("https://graph.facebook.com/v16.0/118319414584193/messages", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify(data),
+    })
+        .then((response) => {
+            return response.json();
+        })
+        .then((response) => {
+            console.log("response-json", response);
+        })
+        .catch((e) => {
+            console.error(e);
+        });
+
+    // backup((process.argv[3] ? process.argv[3] : ".") + "/backup.json");
+}

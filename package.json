@@ -1,0 +1,10 @@
+{
+    "dependencies": {
+        "@azure/msal-node": "^1.17.2",
+        "axios": "^1.4.0",
+        "moment": "^2.29.4",
+        "sftp-upload": "^1.0.4",
+        "ssh2-sftp-client": "^9.1.0",
+        "yargs": "^17.7.2"
+    }
+}
